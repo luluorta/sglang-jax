@@ -179,7 +179,7 @@ def prepare_fused_moe_inputs(
     weight_dtype: jnp.dtype = jnp.bfloat16,
     mesh: jax.sharding.Mesh | None = None,
     *,
-    ep_axis_name: str = "tensor",
+    ep_axis_name: str = "data",
     include_weights: bool = True,
     include_shared_expert: bool = False,
     se_intermediate_size: int | None = None,
@@ -363,6 +363,18 @@ def build_mesh(ep_size: int = 1, tp_size: int = 1):
     devices = jax.devices()[: ep_size * tp_size]
     return create_device_mesh(
         ici_parallelism=[tp_size, ep_size],
+        dcn_parallelism=[1, 1],
+        devices=devices,
+        mesh_axes=("data", "tensor"),
+    )
+
+
+def build_fused_moe_mesh(ep_size: int = 1, tp_size: int = 1):
+    if ep_size <= 0 or tp_size <= 0:
+        raise ValueError(f"Expected {ep_size=} and {tp_size=} to be > 0.")
+    devices = jax.devices()[: ep_size * tp_size]
+    return create_device_mesh(
+        ici_parallelism=[ep_size, tp_size],
         dcn_parallelism=[1, 1],
         devices=devices,
         mesh_axes=("data", "tensor"),

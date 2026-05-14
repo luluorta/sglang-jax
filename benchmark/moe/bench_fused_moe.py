@@ -26,7 +26,7 @@ from benchmark.moe.utils import (
     DEFAULT_NUM_TOKENS,
     MoEBenchmarkCase,
     MoEImbalanceSimulator,
-    build_mesh,
+    build_fused_moe_mesh,
     make_moe_cases,
     prepare_fused_moe_inputs,
     select_cases,
@@ -39,10 +39,10 @@ from sgl_jax.srt.kernels.fused_moe.v1.kernel import (
 )
 from sgl_jax.srt.layers.moe import FusedEPMoE, TopK
 
-# Match the fused_moe kernel's current pallas VMEM limit (96 MiB).
+# Match the fused_moe kernel's current pallas VMEM limit (64 MiB).
 # The estimator still applies its own MSA overhead factor, and callers can
 # further tighten the search with `--tpu-vmem-headroom-ratio`.
-DEFAULT_TPU_VMEM_BUDGET_MB = 96
+DEFAULT_TPU_VMEM_BUDGET_MB = 64
 DEFAULT_TPU_VMEM_BUDGET_BYTES = DEFAULT_TPU_VMEM_BUDGET_MB * 1024 * 1024
 
 # ---------------------------------------------------------------------------
@@ -803,10 +803,12 @@ def run_all(
         f"estimate_scale={tpu_vmem_estimate_scale:.2f}"
     )
 
+    ep_axis_name = "data"
+
     for case in cases:
         t_packing = _dtype_packing(jnp.bfloat16)
-        mesh = build_mesh(ep_size=case.ep_size, tp_size=case.tp_size)
-        mesh_ep = mesh.shape["tensor"]
+        mesh = build_fused_moe_mesh(ep_size=case.ep_size, tp_size=case.tp_size)
+        mesh_ep = mesh.shape[ep_axis_name]
         if mesh_ep != case.ep_size:
             print(f"warning [case={case.name}] mesh_ep={mesh_ep} != case.ep_size={case.ep_size}")
         local_num_tokens = case.num_tokens // mesh_ep
@@ -830,6 +832,7 @@ def run_all(
             case,
             weight_dtype=weight_dtype,
             mesh=mesh,
+            ep_axis_name=ep_axis_name,
             include_weights=False,
             include_shared_expert=use_shared_expert,
         )
@@ -870,7 +873,7 @@ def run_all(
             )
 
         data["router_logits"] = jax.device_put(
-            custom_logits, jax.sharding.NamedSharding(mesh, P("tensor", None))
+            custom_logits, jax.sharding.NamedSharding(mesh, P(ep_axis_name, None))
         )
         token_valid_mask: jax.Array | None = None
         if token_mask_mode != "none":
@@ -891,7 +894,7 @@ def run_all(
                 jax.sharding.NamedSharding(
                     mesh,
                     P(
-                        "tensor",
+                        ep_axis_name,
                     ),
                 ),
             )
