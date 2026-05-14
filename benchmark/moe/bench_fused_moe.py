@@ -27,6 +27,7 @@ from benchmark.moe.utils import (
     MoEBenchmarkCase,
     MoEImbalanceSimulator,
     build_fused_moe_mesh,
+    get_mesh_shape_product,
     make_moe_cases,
     prepare_fused_moe_inputs,
     select_cases,
@@ -808,7 +809,7 @@ def run_all(
     for case in cases:
         t_packing = _dtype_packing(jnp.bfloat16)
         mesh = build_fused_moe_mesh(ep_size=case.ep_size, tp_size=case.tp_size)
-        mesh_ep = mesh.shape[ep_axes]
+        mesh_ep = get_mesh_shape_product(mesh, ep_axes)
         if mesh_ep != case.ep_size:
             print(f"warning [case={case.name}] mesh_ep={mesh_ep} != case.ep_size={case.ep_size}")
         local_num_tokens = case.num_tokens // mesh_ep
