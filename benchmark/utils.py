@@ -187,7 +187,7 @@ def multiple_iteration_timeit_from_trace(
     with jax.profiler.trace(trace_dir):
         for i in range(tries):
             data_args = data_generator()
-            with jax.profiler.StepTraceAnnotation(task, step_num=i):
+            with jax.profiler.StepTraceAnnotation(f"host_{task}", step_num=i):
                 with jax.named_scope(f"{MARKER}_{i}"):
                     out = compute_func(*data_args)
                     jax.block_until_ready(out)

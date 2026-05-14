@@ -151,6 +151,8 @@ def run_all(
                 topk_weights, topk_ids = topk(router_logits)
                 return moe(hidden_states, topk_weights, topk_ids)
 
+            #task_name = f"ep_moe_{case.name}"
+            task_name = "jit_ep_moe_fn*"
             times = multiple_iteration_timeit_from_trace(
                 compute_func=lambda: ep_moe_fn(
                     data["tokens"],
@@ -161,7 +163,7 @@ def run_all(
                     moe_state_leaves=moe_state_leaves,
                 ),
                 data_generator=lambda: (),
-                task=f"ep_moe_{case.name}",
+                task=task_name,
                 tries=iters,
                 warmup=1,
             )
