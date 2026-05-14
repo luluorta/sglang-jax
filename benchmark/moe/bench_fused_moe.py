@@ -803,12 +803,12 @@ def run_all(
         f"estimate_scale={tpu_vmem_estimate_scale:.2f}"
     )
 
-    ep_axis_name = "data"
+    ep_axes = ("data", "tensor")
 
     for case in cases:
         t_packing = _dtype_packing(jnp.bfloat16)
         mesh = build_fused_moe_mesh(ep_size=case.ep_size, tp_size=case.tp_size)
-        mesh_ep = mesh.shape[ep_axis_name]
+        mesh_ep = mesh.shape[ep_axes]
         if mesh_ep != case.ep_size:
             print(f"warning [case={case.name}] mesh_ep={mesh_ep} != case.ep_size={case.ep_size}")
         local_num_tokens = case.num_tokens // mesh_ep
@@ -832,7 +832,7 @@ def run_all(
             case,
             weight_dtype=weight_dtype,
             mesh=mesh,
-            ep_axis_name=ep_axis_name,
+            ep_axes=ep_axes,
             include_weights=False,
             include_shared_expert=use_shared_expert,
         )
@@ -873,7 +873,7 @@ def run_all(
             )
 
         data["router_logits"] = jax.device_put(
-            custom_logits, jax.sharding.NamedSharding(mesh, P(ep_axis_name, None))
+            custom_logits, jax.sharding.NamedSharding(mesh, P(ep_axes, None))
         )
         token_valid_mask: jax.Array | None = None
         if token_mask_mode != "none":
@@ -894,7 +894,7 @@ def run_all(
                 jax.sharding.NamedSharding(
                     mesh,
                     P(
-                        ep_axis_name,
+                        ep_axes,
                     ),
                 ),
             )

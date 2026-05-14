@@ -174,12 +174,42 @@ def prepare_gmm_inputs(
     }
 
 
+def get_mesh_shape_product(
+    mesh: jax.sharding.Mesh,
+    axes: str | list[str] | tuple[str] |None,
+) -> int:
+    """
+    Get the product of mesh dimensions for one or more axes.
+
+    Examples:
+        # Single axis (defaults to 1 if not present)
+        get_mesh_shape_product(mesh, "model")
+
+        # Multiple axes - computes product of their sizes
+        get_mesh_shape_product(mesh, ["model", "attn_dp"])
+
+        # None means no sharding on this dimension
+        get_mesh_shape_product(mesh, None)  # returns 1
+    """
+    if axes is None:
+        return 1
+
+    if isinstance(axes, str):
+        axes = [axes]
+
+    product = 1
+    for axis in axes:
+        product *= mesh.shape.get(axis, 1)
+
+    return product
+
+
 def prepare_fused_moe_inputs(
     case: MoEBenchmarkCase,
     weight_dtype: jnp.dtype = jnp.bfloat16,
     mesh: jax.sharding.Mesh | None = None,
     *,
-    ep_axis_name: str = "data",
+    ep_axes: str | tuple[str] | None = None,
     include_weights: bool = True,
     include_shared_expert: bool = False,
     se_intermediate_size: int | None = None,
@@ -216,21 +246,21 @@ def prepare_fused_moe_inputs(
         out["router_logits"] = router_logits
         return out
 
-    ep_size = mesh.shape[ep_axis_name]
+    ep_size = get_mesh_shape_product(mesh, ep_axes)
     if case.num_tokens % ep_size != 0:
         raise ValueError(
-            f"Expected {case.num_tokens=} to be divisible by {ep_size=} for {ep_axis_name=}."
+            f"Expected {case.num_tokens=} to be divisible by {ep_size=} for {ep_axes}."
         )
     if case.num_experts % ep_size != 0:
         raise ValueError(
-            f"Expected {case.num_experts=} to be divisible by {ep_size=} for {ep_axis_name=}."
+            f"Expected {case.num_experts=} to be divisible by {ep_size=} for {ep_axes}."
         )
 
-    tokens_sharding = NamedSharding(mesh, P(ep_axis_name, None))
-    logits_sharding = NamedSharding(mesh, P(ep_axis_name, None))
-    w1_sharding = NamedSharding(mesh, P(ep_axis_name, None, None))
-    w2_sharding = NamedSharding(mesh, P(ep_axis_name, None, None))
-    w3_sharding = NamedSharding(mesh, P(ep_axis_name, None, None))
+    tokens_sharding = NamedSharding(mesh, P(ep_axes, None))
+    logits_sharding = NamedSharding(mesh, P(ep_axes, None))
+    w1_sharding = NamedSharding(mesh, P(ep_axes, None, None))
+    w2_sharding = NamedSharding(mesh, P(ep_axes, None, None))
+    w3_sharding = NamedSharding(mesh, P(ep_axes, None, None))
 
     se_w1_sharding = NamedSharding(mesh, P())
     se_w2_sharding = NamedSharding(mesh, P())
