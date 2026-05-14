@@ -163,9 +163,8 @@ def run_all(
                 data_generator=lambda: (),
                 task=f"ep_moe_{case.name}",
                 tries=iters,
+                warmup=1,
             )
-            if len(times) > 1:
-                times = times[1:]
             mean_ms = float(np.mean(times)) if times else float("nan")
             print(f"  ep_moe: {mean_ms:.3f} ms (trace) | samples={times}")
 
