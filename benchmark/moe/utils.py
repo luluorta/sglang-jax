@@ -107,11 +107,9 @@ def generate_router_logits(
 ) -> jax.Array:
     """Synthetic router logits with configurable balance; keep generation cheap."""
     if scenario == "random":
-        base = jnp.reshape(
-            jnp.arange(num_tokens * num_experts, dtype=jnp.float32),
-            (num_tokens, num_experts),
+        return jax.random.normal(
+            jax.random.PRNGKey(42), (num_tokens, num_experts), dtype=jnp.float32
         )
-        return base * 0.001
 
     if scenario == "balanced":
         logits = -10.0 * jnp.ones((num_tokens, num_experts), dtype=jnp.float32)

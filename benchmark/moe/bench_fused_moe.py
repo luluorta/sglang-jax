@@ -1180,8 +1180,6 @@ def run_all(
                     )
                     print(traceback.format_exc(), flush=True)
                     continue
-                if len(times) > 1:
-                    times = times[1:]
                 mean_ms = float(np.mean(times)) if times else float("nan")
                 print(f"     fused_moe[{tag}]: {mean_ms:.3f} ms (trace) | samples={times}")
                 if block_cfg is None:
