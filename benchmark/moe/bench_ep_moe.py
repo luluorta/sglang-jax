@@ -18,6 +18,7 @@ from jax.experimental.compilation_cache import compilation_cache as _compilation
 from benchmark.moe.utils import (
     DEFAULT_NUM_TOKENS,
     MoEBenchmarkCase,
+    MoEImbalanceSimulator,
     build_group_sizes,
     build_mesh,
     format_load_info,
@@ -41,11 +42,26 @@ def prepare_ep_moe_inputs(
     inside the mesh with explicit sharding to avoid huge random initialization.
     """
     tokens = jnp.empty((case.num_tokens, case.hidden_size), dtype=dtype)
-    router_logits = generate_router_logits(
+    # router_logits = generate_router_logits(
+    #     case.num_tokens,
+    #     case.num_experts,
+    #     scenario,
+    #     num_experts_per_tok=case.top_k,
+    # ).astype(dtype)
+    target_counts = MoEImbalanceSimulator.generate_counts(
         case.num_tokens,
+        case.top_k,
         case.num_experts,
-        scenario,
-        num_experts_per_tok=case.top_k,
+        mode=scenario,
+        alpha=None,
+        zipf_s=None,
+        hotspot_ratio=None,
+        hotspot_count=None,
+        zero_expert_count=None,
+        non_hotspot_alpha=None,
+    )
+    router_logits = MoEImbalanceSimulator.create_logits_from_counts(
+        case.num_tokens, case.num_experts, case.top_k, target_counts
     ).astype(dtype)
     group_sizes, topk_ids = build_group_sizes(router_logits, case.top_k, case.num_experts)
     return {
