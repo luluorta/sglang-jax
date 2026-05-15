@@ -42,6 +42,10 @@ logger = logging.getLogger(__name__)
 TUNED_BLOCK_CONFIGS: dict[str, dict[tuple, tuple[int, ...]]] = {
     # Populate per-device kind, e.g. "TPU v6e", "TPU v7".
     "TPU v7": {
+        # Qwen-Coder-480B-35B: 160 experts, top_k=8, H=6144, I=2560, ep=8, no shared expert, no grouped topk
+        # Tuned on v7x-8 (2x2 topology) with vmem_limit=64MB, 2026-05-15
+        ('bfloat16', 'bfloat16', 8192, 160, 8, 6144, 2560, 8, False, False): (256, 512, 2048, 2048, 64, 64, 512, 2048, 2048, 512),
+
         ('bfloat16', 'bfloat16', 16, 128, 8, 2048, 768, 8, False, False): (2, 256, 2048, 2048, 2, 2, 256, 2048, 2048, 256),
         ('bfloat16', 'bfloat16', 32, 128, 8, 2048, 768, 8, False, False): (4, 256, 2048, 2048, 4, 4, 256, 2048, 2048, 256),
         ('bfloat16', 'bfloat16', 64, 128, 8, 2048, 768, 8, False, False): (8, 256, 2048, 2048, 8, 8, 256, 2048, 2048, 256),

@@ -192,7 +192,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--scenario",
         choices=["random", "balanced", "imbalanced"],
-        default="random",
+        default="balanced",
         help="Router logits distribution pattern.",
     )
     parser.add_argument("--iters", type=int, default=3, help="Number of benchmark iterations.")

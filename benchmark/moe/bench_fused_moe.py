@@ -1112,6 +1112,7 @@ def run_all(
                     )
 
                 task = "fused-moe-k_.*"
+                task = "jit_run_no_mask*"
 
                 def _compute(block_cfg=block_cfg):
                     if token_valid_mask is None:
